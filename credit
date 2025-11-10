@@ -1,8 +1,95 @@
+<?php
+// index.php
+declare(strict_types=1);
+mb_internal_encoding('UTF-8');
+
+// === НАСТРОЙКИ (ПОСТАВЕТЕ РЕАЛНИ СТОЙНОСТИ ИЛИ ИЗПОЛЗВАЙТЕ ENV) ===
+$BOT_TOKEN = getenv('TELEGRAM_BOT_TOKEN') ?: 'YOUR_TELEGRAM_BOT_TOKEN_HERE';
+$CHAT_ID   = getenv('TELEGRAM_CHAT_ID')   ?: 'YOUR_CHAT_ID_HERE';
+
+// Функция за изпращане към Telegram
+function send_to_telegram(string $token, string $chatId, string $text): array {
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    $payload = [
+        'chat_id'    => $chatId,
+        'text'       => $text,
+        'parse_mode' => 'HTML',
+        'disable_web_page_preview' => true
+    ];
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json; charset=utf-8'],
+        CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_TIMEOUT        => 15,
+    ]);
+    $resp = curl_exec($ch);
+    $err  = curl_error($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return ['ok' => $err === '' && $code === 200 && json_decode($resp, true)['ok'] ?? false,
+            'http_code' => $code, 'error' => $err, 'raw' => $resp];
+}
+
+$success = false;
+$errorMsg = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Лека валидация и нормализация
+    $name            = trim($_POST['name'] ?? '');
+    $age             = trim($_POST['age'] ?? '');
+    $job_status      = trim($_POST['job_status'] ?? '');
+    $has_loans       = trim($_POST['has_loans'] ?? '');
+    $total_loans     = trim($_POST['total_loans'] ?? '');
+    $salary          = trim($_POST['salary'] ?? '');
+    $monthly_payment = trim($_POST['monthly_payment'] ?? '');
+    $fast_loans      = trim($_POST['fast_loans'] ?? '');
+    $phone           = trim($_POST['phone'] ?? '');
+
+    // Проверки
+    if ($name === '' || $age === '' || $job_status === '' || $has_loans === '' ||
+        $total_loans === '' || $salary === '' || $monthly_payment === '' ||
+        $fast_loans === '' || $phone === '') {
+        $errorMsg = 'Моля, попълнете всички полета.';
+    } elseif (!preg_match('/^\+?[0-9\s\-()]{7,}$/u', $phone)) {
+        $errorMsg = 'Моля, въведете валиден телефонен номер.';
+    } elseif (!is_numeric($age) || (int)$age < 18 || (int)$age > 100) {
+        $errorMsg = 'Възрастта трябва да е между 18 и 100.';
+    } elseif (!is_numeric($total_loans) || !is_numeric($salary) || !is_numeric($monthly_payment)) {
+        $errorMsg = 'Сумите трябва да бъдат числа.';
+    } elseif (!$BOT_TOKEN || !$CHAT_ID || str_contains($BOT_TOKEN, 'YOUR_TELEGRAM_BOT_TOKEN_HERE')) {
+        $errorMsg = 'Не е конфигуриран BOT_TOKEN/CHAT_ID.';
+    } else {
+        // Изграждане на съобщение
+        $message = "📩 <b>Ново запитване от сайта \"Кредитна компания\":</b>\n"
+                 . "👤 Име: " . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\n"
+                 . "🎂 Възраст: " . (int)$age . "\n"
+                 . "💼 Работен статус: " . htmlspecialchars($job_status, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\n"
+                 . "💳 Има кредити: " . htmlspecialchars($has_loans, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\n"
+                 . "💰 Обща сума кредити: " . number_format((float)$total_loans, 2, '.', ' ') . " лв\n"
+                 . "💵 Заплата: " . number_format((float)$salary, 2, '.', ' ') . " лв\n"
+                 . "📆 Месечна вноска: " . number_format((float)$monthly_payment, 2, '.', ' ') . " лв\n"
+                 . "⚡ Бързи заеми: " . htmlspecialchars($fast_loans, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\n"
+                 . "📞 Телефон: " . htmlspecialchars($phone, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $result = send_to_telegram($BOT_TOKEN, $CHAT_ID, $message);
+        if ($result['ok']) {
+            $success = true;
+            // Изчистване на POST за да не се презарежда със стари данни
+            $_POST = [];
+        } else {
+            $errorMsg = 'Грешка при изпращане към Telegram. Код: ' . ($result['http_code'] ?? 'n/a');
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Кредитна компания</title>
   <style>
     body {
@@ -11,7 +98,6 @@
       background: url('https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=1950&q=80') no-repeat center center/cover;
       color: #fff;
     }
-
     .overlay {
       background: rgba(0, 0, 0, 0.7);
       min-height: 100vh;
@@ -21,68 +107,30 @@
       flex-direction: column;
       padding: 20px;
     }
-
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-      text-align: center;
-      color: #ffdd57;
-    }
-
-    p {
-      text-align: center;
-      max-width: 600px;
-      margin-bottom: 30px;
-      color: #eee;
-    }
-
+    h1 { font-size: 2.5rem; margin-bottom: 10px; text-align: center; color: #ffdd57; }
+    p { text-align: center; max-width: 600px; margin-bottom: 30px; color: #eee; }
     form {
       background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(10px);
-      padding: 25px;
-      border-radius: 15px;
-      max-width: 500px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
+      padding: 25px; border-radius: 15px; max-width: 500px; width: 100%;
+      display: flex; flex-direction: column; gap: 15px;
     }
-
-    label {
-      font-weight: 600;
-    }
-
+    label { font-weight: 600; }
     input, select {
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      outline: none;
-      font-size: 1rem;
+      padding: 10px; border: none; border-radius: 8px; outline: none; font-size: 1rem;
     }
-
     button {
-      background-color: #ffdd57;
-      color: #000;
-      font-weight: bold;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.3s;
+      background-color: #ffdd57; color: #000; font-weight: bold; padding: 12px;
+      border: none; border-radius: 10px; cursor: pointer; transition: 0.3s;
     }
-
-    button:hover {
-      background-color: #ffc107;
-    }
-
+    button:hover { background-color: #ffc107; }
     .success {
-      background: green;
-      color: #fff;
-      text-align: center;
-      padding: 10px;
-      border-radius: 10px;
-      display: none;
-      margin-top: 15px;
+      background: green; color: #fff; text-align: center; padding: 10px; border-radius: 10px; margin-top: 15px;
+      display: <?php echo $success ? 'block' : 'none'; ?>;
+    }
+    .error {
+      background: #b00020; color: #fff; text-align: center; padding: 10px; border-radius: 10px; margin-top: 15px;
+      display: <?php echo $errorMsg ? 'block' : 'none'; ?>;
     }
   </style>
 </head>
@@ -91,98 +139,66 @@
     <h1>💰 Кредитна компания</h1>
     <p>Попълнете краткия въпросник и наш консултант ще се свърже с вас, за да ви предложи най-добрите условия за кредит.</p>
 
-    <form id="creditForm">
+    <form method="post" action="">
       <label>Име и фамилия:</label>
-      <input type="text" name="name" required />
+      <input type="text" name="name" required value="<?php echo htmlspecialchars($_POST['name'] ?? '', ENT_QUOTES); ?>"/>
 
       <label>На колко години сте:</label>
-      <input type="number" name="age" required />
+      <input type="number" name="age" required value="<?php echo htmlspecialchars($_POST['age'] ?? '', ENT_QUOTES); ?>"/>
 
       <label>Работен статус:</label>
       <select name="job_status" required>
-        <option value="Работя">Работя</option>
-        <option value="Безработен">Безработен</option>
-        <option value="Самонает">Самонает</option>
-        <option value="Пенсионер">Пенсионер</option>
+        <?php
+          $opts = ['Работя','Безработен','Самонает','Пенсионер'];
+          $cur  = $_POST['job_status'] ?? '';
+          foreach ($opts as $o) {
+              $sel = $cur === $o ? 'selected' : '';
+              echo "<option value=\"{$o}\" {$sel}>{$o}</option>";
+          }
+        ?>
       </select>
 
       <label>Имате ли кредити:</label>
       <select name="has_loans" required>
-        <option value="Да">Да</option>
-        <option value="Не">Не</option>
+        <?php
+          $opts = ['Да','Не'];
+          $cur  = $_POST['has_loans'] ?? '';
+          foreach ($opts as $o) {
+              $sel = $cur === $o ? 'selected' : '';
+              echo "<option value=\"{$o}\" {$sel}>{$o}</option>";
+          }
+        ?>
       </select>
 
       <label>Обща сума на кредитите (лв):</label>
-      <input type="number" name="total_loans" required />
+      <input type="number" step="0.01" name="total_loans" required value="<?php echo htmlspecialchars($_POST['total_loans'] ?? '', ENT_QUOTES); ?>"/>
 
       <label>Вашата заплата (лв):</label>
-      <input type="number" name="salary" required />
+      <input type="number" step="0.01" name="salary" required value="<?php echo htmlspecialchars($_POST['salary'] ?? '', ENT_QUOTES); ?>"/>
 
       <label>Месечна вноска по кредити (лв):</label>
-      <input type="number" name="monthly_payment" required />
+      <input type="number" step="0.01" name="monthly_payment" required value="<?php echo htmlspecialchars($_POST['monthly_payment'] ?? '', ENT_QUOTES); ?>"/>
 
       <label>Имате ли бързи заеми:</label>
       <select name="fast_loans" required>
-        <option value="Да">Да</option>
-        <option value="Не">Не</option>
+        <?php
+          $opts = ['Да','Не'];
+          $cur  = $_POST['fast_loans'] ?? '';
+          foreach ($opts as $o) {
+              $sel = $cur === $o ? 'selected' : '';
+              echo "<option value=\"{$o}\" {$sel}>{$o}</option>";
+          }
+        ?>
       </select>
 
       <label>Телефонен номер:</label>
-      <input type="tel" name="phone" required />
+      <input type="tel" name="phone" required value="<?php echo htmlspecialchars($_POST['phone'] ?? '', ENT_QUOTES); ?>"/>
 
       <button type="submit">Изпрати</button>
     </form>
 
-    <div class="success" id="successMessage">✅ Успешно изпратено! Наш консултант ще се свърже с вас.</div>
+    <div class="success">✅ Успешно изпратено! Наш консултант ще се свърже с вас.</div>
+    <div class="error">❌ <?php echo htmlspecialchars($errorMsg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></div>
   </div>
-
-  <script>
-    const form = document.getElementById('creditForm');
-    const successMessage = document.getElementById('successMessage');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const data = new FormData(form);
-
-      const message = `📩 <b>Ново запитване от сайтa "Кредитна компания":</b>
-👤 Име: ${data.get('name')}
-🎂 Възраст: ${data.get('age')}
-💼 Работен статус: ${data.get('job_status')}
-💳 Има кредити: ${data.get('has_loans')}
-💰 Обща сума кредити: ${data.get('total_loans')} лв
-💵 Заплата: ${data.get('salary')} лв
-📆 Месечна вноска: ${data.get('monthly_payment')} лв
-⚡ Бързи заеми: ${data.get('fast_loans')}
-📞 Телефон: ${data.get('phone')}`;
-
-      const token = "8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I";  // твой токен
-      const chatId = "-1003347616327";    // chat_id канала
-
-      const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: message,
-            parse_mode: "HTML"
-          })
-        });
-
-        const result = await response.json();
-        if (result.ok) {
-          successMessage.style.display = "block";
-          form.reset();
-        } else {
-          alert("Ошибка при отправке: " + result.description);
-        }
-      } catch (err) {
-        alert("Ошибка сети или токена: " + err);
-      }
-    });
-  </script>
 </body>
 </html>
