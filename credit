@@ -82,6 +82,7 @@
       padding: 10px;
       border-radius: 10px;
       display: none;
+      margin-top: 15px;
     }
   </style>
 </head>
@@ -143,8 +144,8 @@
       e.preventDefault();
 
       const data = new FormData(form);
-      const message = `
-📩 *Ново запитване от сайтa "Кредитна компания":*
+
+      const message = `📩 <b>Ново запитване от сайтa "Кредитна компания":</b>
 👤 Име: ${data.get('name')}
 🎂 Възраст: ${data.get('age')}
 💼 Работен статус: ${data.get('job_status')}
@@ -153,26 +154,34 @@
 💵 Заплата: ${data.get('salary')} лв
 📆 Месечна вноска: ${data.get('monthly_payment')} лв
 ⚡ Бързи заеми: ${data.get('fast_loans')}
-📞 Телефон: ${data.get('phone')}
-      `;
+📞 Телефон: ${data.get('phone')}`;
 
-      const token = "8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I"; // <-- Замени с твоя Telegram Bot Token
-      const chatId = "-1003347616327";  // <-- Замени с твоя Chat ID
+      const token = "8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I";  // твой токен
+      const chatId = "-1003347616327";    // chat_id канала
 
       const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
-      await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: "Markdown"
-        })
-      });
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: "HTML"
+          })
+        });
 
-      successMessage.style.display = "block";
-      form.reset();
+        const result = await response.json();
+        if (result.ok) {
+          successMessage.style.display = "block";
+          form.reset();
+        } else {
+          alert("Ошибка при отправке: " + result.description);
+        }
+      } catch (err) {
+        alert("Ошибка сети или токена: " + err);
+      }
     });
   </script>
 </body>
