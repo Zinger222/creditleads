@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Кредитна компания</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: url('https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=1950&q=80') no-repeat center center/cover;
+      color: #fff;
+    }
+
+    .overlay {
+      background: rgba(0, 0, 0, 0.7);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #ffdd57;
+    }
+
+    p {
+      text-align: center;
+      max-width: 600px;
+      margin-bottom: 30px;
+      color: #eee;
+    }
+
+    form {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 25px;
+      border-radius: 15px;
+      max-width: 500px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input, select {
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+      font-size: 1rem;
+    }
+
+    button {
+      background-color: #ffdd57;
+      color: #000;
+      font-weight: bold;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #ffc107;
+    }
+
+    .success {
+      background: green;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h1>💰 Кредитна компания</h1>
+    <p>Попълнете краткия въпросник и наш консултант ще се свърже с вас, за да ви предложи най-добрите условия за кредит.</p>
+
+    <form id="creditForm">
+      <label>Име и фамилия:</label>
+      <input type="text" name="name" required />
+
+      <label>На колко години сте:</label>
+      <input type="number" name="age" required />
+
+      <label>Работен статус:</label>
+      <select name="job_status" required>
+        <option value="Работя">Работя</option>
+        <option value="Безработен">Безработен</option>
+        <option value="Самонает">Самонает</option>
+        <option value="Пенсионер">Пенсионер</option>
+      </select>
+
+      <label>Имате ли кредити:</label>
+      <select name="has_loans" required>
+        <option value="Да">Да</option>
+        <option value="Не">Не</option>
+      </select>
+
+      <label>Обща сума на кредитите (лв):</label>
+      <input type="number" name="total_loans" required />
+
+      <label>Вашата заплата (лв):</label>
+      <input type="number" name="salary" required />
+
+      <label>Месечна вноска по кредити (лв):</label>
+      <input type="number" name="monthly_payment" required />
+
+      <label>Имате ли бързи заеми:</label>
+      <select name="fast_loans" required>
+        <option value="Да">Да</option>
+        <option value="Не">Не</option>
+      </select>
+
+      <label>Телефонен номер:</label>
+      <input type="tel" name="phone" required />
+
+      <button type="submit">Изпрати</button>
+    </form>
+
+    <div class="success" id="successMessage">✅ Успешно изпратено! Наш консултант ще се свърже с вас.</div>
+  </div>
+
+  <script>
+    const form = document.getElementById('creditForm');
+    const successMessage = document.getElementById('successMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = new FormData(form);
+      const message = `
+📩 *Ново запитване от сайтa "Кредитна компания":*
+👤 Име: ${data.get('name')}
+🎂 Възраст: ${data.get('age')}
+💼 Работен статус: ${data.get('job_status')}
+💳 Има кредити: ${data.get('has_loans')}
+💰 Обща сума кредити: ${data.get('total_loans')} лв
+💵 Заплата: ${data.get('salary')} лв
+📆 Месечна вноска: ${data.get('monthly_payment')} лв
+⚡ Бързи заеми: ${data.get('fast_loans')}
+📞 Телефон: ${data.get('phone')}
+      `;
+
+      const token = "YOUR_BOT_TOKEN"; // <-- Замени с твоя Telegram Bot Token
+      const chatId = "YOUR_CHAT_ID";  // <-- Замени с твоя Chat ID
+
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: "Markdown"
+        })
+      });
+
+      successMessage.style.display = "block";
+      form.reset();
+    });
+  </script>
+</body>
+</html>
