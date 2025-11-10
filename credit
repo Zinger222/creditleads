@@ -4,8 +4,8 @@ declare(strict_types=1);
 mb_internal_encoding('UTF-8');
 
 // === НАСТРОЙКИ (ПОСТАВЕТЕ РЕАЛНИ СТОЙНОСТИ ИЛИ ИЗПОЛЗВАЙТЕ ENV) ===
-$BOT_TOKEN = getenv('8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I') ?: 'YOUR_TELEGRAM_BOT_TOKEN_HERE';
-$CHAT_ID   = getenv('-1003347616327')   ?: 'YOUR_CHAT_ID_HERE';
+$BOT_TOKEN = getenv('8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I') ?: '8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I';
+$CHAT_ID   = getenv('-1003347616327')   ?: '-8455295320';
 
 // Функция за изпращане към Telegram
 function send_to_telegram(string $token, string $chatId, string $text): array {
