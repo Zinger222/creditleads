@@ -156,7 +156,7 @@
 📞 Телефон: ${data.get('phone')}
       `;
 
-      const token = "8455295320:AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I"; // <-- Замени с твоя Telegram Bot Token
+      const token = "AAE14t6zInNQTypIbu-EhMiCov_CX3aoI_I"; // <-- Замени с твоя Telegram Bot Token
       const chatId = "3347616327";  // <-- Замени с твоя Chat ID
 
       const url = `https://api.telegram.org/bot${token}/sendMessage`;
